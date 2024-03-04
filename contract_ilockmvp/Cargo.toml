@@ -1,0 +1,49 @@
+[package]
+name = "ilockmvp"
+version = "0.1.0"
+authors = [
+    "Interlock Network <smartcontracts@interlock.network>",
+    "Blair Munro <blairmunroakusa@gmail.com>",
+    "Alessandro Baldassarre <alessandro.baldassarre.dev@gmail.com>",
+]
+edition = "2021"
+license = "GNU GENERAL PUBLIC LICENSE"
+
+# workaround for known rust compiler bug
+# see https://github.com/rust-lang/rust/issues/78744
+[profile.release]
+overflow-checks = false
+
+[dependencies]
+ink = { version = "~4.0.0", default-features = false}
+
+scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
+scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
+
+openbrush = { tag = "3.0.0", git = "https://github.com/Brushfam/openbrush-contracts", default-features = false, features = ["psp22", "ownable", "pausable"] }
+
+[dev-dependencies]
+ink_e2e = { version = "4.0" }
+
+[lib]
+name = "ilockmvp"
+path = "lib.rs"
+crate-type = [
+	# Used for normal contract Wasm blobs.
+	"cdylib",
+	# Use to generate ABI
+	"rlib",
+]
+
+[features]
+default = ["std"]
+std = [
+    "ink/std",
+    "scale/std",
+    "scale-info/std",
+
+    "openbrush/std",
+]
+
+ink-as-dependency = []
+e2e-tests = []

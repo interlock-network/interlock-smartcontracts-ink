@@ -1,0 +1,58 @@
+# ignore stuff
+
+build
+node_modules
+.idea
+.arcconfig
+*.iml
+bin
+*.bin
+*.abi
+/mutagen.sh
+venv
+.env.dev
+.mnemonic*
+bigtable-admin.json
+bigtable-writer.json
+*.working
+
+
+# rust stuff
+target
+*.lock
+
+# misc stuff
+migrations
+build
+test
+truffle-config.js
+test-ledger
+~\$*
+*.swp
+*.swo
+*.swn
+*.swm
+.vscode/*
+*.working
+package*
+
+# system stuff
+.DS_STORE
+
+# hardhat
+coverage
+coverage.json
+typechain
+typechain-types
+
+claimReceipts.json
+registeredStakes.json
+contractAdmin.json
+stakeIdentifiers.json
+stakedata_test.json
+scripts/*.js
+
+# Hardhat files
+cache
+artifacts
+
