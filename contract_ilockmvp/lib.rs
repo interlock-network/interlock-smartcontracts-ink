@@ -33,8 +33,9 @@
 )]
 
 #![allow(non_snake_case)]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std, no_main)]
 #![feature(min_specialization)]
+#![warn(clippy::arithmetic_side_effects)]
 
 
 pub use self::ilockmvp::{
@@ -73,7 +74,7 @@ pub mod ilockmvp {
 
     /// - Magic numbers.
     pub const ID_LENGTH: usize = 32;                                // 32B account id
-    pub const POOL_COUNT: usize = 13;                               // number of token pools
+    pub const POOL_COUNT: usize = 7;                                // number of token pools
     pub const VEST_INCREMENT: Timestamp = 2_592_000_000;            // milliseconds in 30 days
     pub const MULTISIG_TIME: Timestamp = 86_400_000;                // milliseconds in 30 days
     pub const MIN_SHARE: u128 = 1_000_000_000;
@@ -81,7 +82,7 @@ pub mod ilockmvp {
     pub const THRESHOLD_MIN: u16 = 2;                               // two signers
 
     /// - Token data.
-    pub const TOKEN_CAP: u128 = 1_000_000_000;                      // 10^9
+    pub const TOKEN_CAP: u128 = 300_000_000;                        // 10^9
     pub const DECIMALS_POWER10: u128 = 1_000_000_000_000_000_000;   // 10^18
     pub const SUPPLY_CAP: u128 = TOKEN_CAP * DECIMALS_POWER10;      // 10^27
     pub const TOKEN_NAME: &str = "Interlock Network";
@@ -98,35 +99,23 @@ pub mod ilockmvp {
 
     /// - Pool data.
     pub const POOLS: [PoolData; POOL_COUNT] = [
-        PoolData { name: "presale_1",                     tokens: 48_622_222,  vests: 18, cliffs: 1, },
-        PoolData { name: "presale_2",                     tokens: 33_333_333,  vests: 15, cliffs: 1, },
-        PoolData { name: "presale_3",                     tokens: 93_750_000,  vests: 12, cliffs: 1, },
-        PoolData { name: "team+founders",                 tokens: 200_000_000, vests: 36, cliffs: 6, },
         PoolData { name: "outlier_ventures",              tokens: 40_000_000,  vests: 24, cliffs: 1, },
         PoolData { name: "advisors",                      tokens: 25_000_000,  vests: 24, cliffs: 1, },
-        PoolData { name: "foundation",                    tokens: 169_264_142, vests: 84, cliffs: 1, },
-        PoolData { name: "rewards",                       tokens: 300_000_000, vests: 48, cliffs: 0, },
-        PoolData { name: "partners",                      tokens: 37_000_000,  vests: 1,  cliffs: 0, },
-        PoolData { name: "community_sale",                tokens: 3_030_303,   vests: 1,  cliffs: 0, },
-        PoolData { name: "public_sale",                   tokens: 50_000_000,  vests: 1,  cliffs: 0, },
+        PoolData { name: "foundation",                    tokens: 83_148_148,  vests: 84, cliffs: 1, },
+        PoolData { name: "rewards",                       tokens: 150_000_000, vests: 84, cliffs: 0, },
+        PoolData { name: "community_sale",                tokens: 1_851_852,   vests: 3,  cliffs: 4, },
         PoolData { name: "proceeds",                      tokens: 0,           vests: 0,  cliffs: 0, },
         PoolData { name: "circulating",                   tokens: 0,           vests: 0,  cliffs: 0, },
     ];
 
     /// - Pools.
-    pub const PRESALE_1: u8         = 0;
-    pub const PRESALE_2: u8         = 1;
-    pub const PRESALE_3: u8         = 2;
-    pub const TEAM: u8              = 3;
-    pub const OUTLIER: u8           = 4;
-    pub const ADVISORS: u8          = 5;
-    pub const FOUNDATION: u8        = 6;
-    pub const REWARDS: u8           = 7;
-    pub const PARTNERS: u8          = 8;
-    pub const COMMUNITY: u8         = 9;
-    pub const PUBLIC: u8            = 10;
-    pub const PROCEEDS: u8          = 11;
-    pub const CIRCULATING: u8       = 12;
+    pub const OUTLIER: u8           = 0;
+    pub const ADVISORS: u8          = 1;
+    pub const FOUNDATION: u8        = 2;
+    pub const REWARDS: u8           = 3;
+    pub const COMMUNITY: u8         = 4;
+    pub const PROCEEDS: u8          = 5;
+    pub const CIRCULATING: u8       = 6;
 
     /// - Multisig functions.
     pub const TRANSFER_OWNERSHIP: u8    = 0;
@@ -691,7 +680,7 @@ pub mod ilockmvp {
     /// - Convert from OtherError into PSP22Error.
     impl Into<PSP22Error> for OtherError {
         fn into(self) -> PSP22Error {
-            PSP22Error::Custom(format!("{:?}", self).into_bytes())
+            PSP22Error::Custom(format!("{:?}", self))
         }
     }
 
@@ -1012,8 +1001,8 @@ pub mod ilockmvp {
             contract.vest.nextpayout = Self::env().block_timestamp() + VEST_INCREMENT;
             contract.reward.total = 0;
 
-            contract.metadata.name = Some(TOKEN_NAME.to_string().into_bytes());
-            contract.metadata.symbol = Some(TOKEN_SYMBOL.to_string().into_bytes());
+            contract.metadata.name = Some(TOKEN_NAME.to_string());
+            contract.metadata.symbol = Some(TOKEN_SYMBOL.to_string());
             contract.metadata.decimals = TOKEN_DECIMALS;
 
             // mint with openbrush:
@@ -1788,9 +1777,7 @@ pub mod ilockmvp {
 
         /// - Function used to payout tokens to pools with no vesting schedule.
         /// POOL ARGUMENTS:
-        ///      PARTNERS
         ///      COMMUNITY
-        ///      PUBLIC
         ///      PROCEEDS
         #[ink(message)]
         #[openbrush::modifiers(only_owner)]
@@ -1816,9 +1803,7 @@ pub mod ilockmvp {
             };
 
             let poolnumber: u8 = match pool.as_str() {
-                "PARTNERS"      => PARTNERS,
                 "COMMUNITY"     => COMMUNITY,
-                "PUBLIC"        => PUBLIC,
                 "PROCEEDS"      => PROCEEDS,
                 _ => return Err(OtherError::InvalidPool)
             };
@@ -2170,13 +2155,10 @@ pub mod ilockmvp {
 
             // guard to check if port exists and if intention is to overwrite
             // * note: bool value is false by default
-            let _ = match self.app.ports.get(number) {
-                Some(_port) => {
-                    if !overwrite {
-                        return Err(OtherError::PortExists);
-                    }
-                },
-                None => (),
+            if let Some(_port) = self.app.ports.get(number) {
+                if !overwrite {
+                    return Err(OtherError::PortExists);
+                }
             };
 
             // guard to make sure cap is not greater than rewards on hand
